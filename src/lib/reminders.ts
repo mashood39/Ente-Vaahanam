@@ -72,3 +72,70 @@ export function describeDue(r: ServiceRecord, currentOdometer: number, unit: str
 
 export const inr = (n: number) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(n);
+
+export type ReminderProgress = {
+  percent: number; // 0 to 100+
+  daysTotal?: number;
+  daysElapsed?: number;
+  daysRemaining?: number;
+  kmTotal?: number;
+  kmElapsed?: number;
+  kmRemaining?: number;
+};
+
+export function reminderProgress(r: ServiceRecord, currentOdometer: number, today: string): ReminderProgress | null {
+  if (r.reminder_state !== "active") return null;
+  if (!r.remind_on && r.remind_at_odometer == null) return null;
+
+  let daysPercent: number | null = null;
+  let kmPercent: number | null = null;
+  let daysTotal: number | undefined;
+  let daysElapsed: number | undefined;
+  let daysRemaining: number | undefined;
+  let kmTotal: number | undefined;
+  let kmElapsed: number | undefined;
+  let kmRemaining: number | undefined;
+
+  if (r.remind_on) {
+    const totalDays = daysBetween(r.done_on, r.remind_on);
+    const remaining = daysBetween(today, r.remind_on);
+    daysTotal = Math.max(1, totalDays);
+    daysElapsed = totalDays - remaining;
+    daysRemaining = remaining;
+    if (totalDays > 0) {
+      daysPercent = Math.round((daysElapsed / totalDays) * 100);
+    } else {
+      daysPercent = remaining <= 0 ? 100 : 0;
+    }
+  }
+
+  if (r.remind_at_odometer != null) {
+    const baseOdo = r.odometer ?? currentOdometer;
+    const totalKm = r.remind_at_odometer - baseOdo;
+    const remaining = r.remind_at_odometer - currentOdometer;
+    kmTotal = Math.max(1, totalKm);
+    kmElapsed = currentOdometer - baseOdo;
+    kmRemaining = remaining;
+    if (totalKm > 0) {
+      kmPercent = Math.round((kmElapsed / totalKm) * 100);
+    } else {
+      kmPercent = remaining <= 0 ? 100 : 0;
+    }
+  }
+
+  const pValues = [daysPercent, kmPercent].filter((x): x is number => x !== null);
+  if (!pValues.length) return null;
+
+  const maxPercent = Math.max(...pValues);
+  const cappedPercent = Math.max(0, Math.min(100, maxPercent));
+
+  return {
+    percent: cappedPercent,
+    daysTotal,
+    daysElapsed,
+    daysRemaining,
+    kmTotal,
+    kmElapsed,
+    kmRemaining,
+  };
+}

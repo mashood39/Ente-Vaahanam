@@ -32,6 +32,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Skip static assets, the service worker, the manifest, and the cron endpoint (it has its own secret).
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|icons/|api/cron/).*)"],
+  // Skip Next.js internals, static assets, service worker, manifest, and cron endpoint
+  matcher: ["/((?!_next|favicon.ico|sw.js|manifest.webmanifest|icons/|api/cron/).*)"],
 };
